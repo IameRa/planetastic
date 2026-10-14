@@ -73,6 +73,9 @@ button:focus-visible{outline:3px solid var(--akz);outline-offset:2px}
 .flbox dl{display:grid;grid-template-columns:auto 1fr;margin:10px 0}
 .flbox dt,.flbox dd{padding:4px 0;border-top:1px dashed var(--linie);font-size:.9rem}
 .flbox dt{color:var(--grau);padding-right:14px}.flbox dd{margin:0;text-align:right;font-weight:600}
+.kdl{display:grid;grid-template-columns:auto 1fr;margin:8px 0 0;font-size:.85rem}.kdl dt,.kdl dd{padding:4px 0;border-top:1px dashed var(--linie)}.kdl dt{color:var(--grau);padding-right:14px}.kdl dd{margin:0;text-align:right;font-weight:600}
+.prog{height:10px;background:var(--linie);border-radius:99px;overflow:hidden;margin:6px 0}.prog i{display:block;height:100%;background:var(--akz)}
+.karte.ja{border-top-color:#2ecc8f}.karte label{flex-direction:row;align-items:center;padding:0 16px 14px;color:var(--text);font-size:.9rem}
 footer{padding:18px 16px 36px;color:var(--grau);font-size:.8rem}
 </style>
 </head>
@@ -85,7 +88,7 @@ footer{padding:18px 16px 36px;color:var(--grau);font-size:.8rem}
   <div class="stats" id="stats"></div>
 </div></header>
 <nav><div id="nav">
-  <button data-t="neu" class="on">Eintragen</button><button data-t="gal">Galerie</button><button data-t="karte">Karte</button><button data-t="muster">Muster</button><button data-t="air">Airlines</button>
+  <button data-t="neu" class="on">Eintragen</button><button data-t="gal">Galerie</button><button data-t="karte">Karte</button><button data-t="muster">Muster</button><button data-t="kat">Katalog</button><button data-t="air">Airlines</button>
 </div></nav>
 <main>
 <section class="tab on" id="t-neu">
@@ -170,6 +173,19 @@ footer{padding:18px 16px 36px;color:var(--grau);font-size:.8rem}
   <div id="mListe"></div>
 </section>
 
+<section class="tab" id="t-kat">
+  <h2>Katalog</h2>
+  <p class="info">Flugzeugtypen zum Durchblättern. Typen aus deinem Logbuch sind automatisch abgehakt. Alles andere kannst du selbst abhaken. Die Werte sind gerundete Richtwerte und hängen von Variante und Ausstattung ab. Bilder stammen von Wikipedia/Wikimedia Commons (verschiedene freie Lizenzen). Hast du den Typ selbst fotografiert, wird dein eigenes Foto gezeigt.</p>
+  <div class="prog" id="kProg"></div>
+  <p class="info" id="kZahl" role="status"></p>
+  <div class="filter">
+    <input id="kSuche" type="search" placeholder="Suche: Name, Hersteller, Typcode" aria-label="Katalog durchsuchen">
+    <select id="kKat" aria-label="Kategorie"><option value="">Alle Kategorien</option></select>
+    <select id="kStatus" aria-label="Status"><option value="">Alle</option><option value="ja">Gesehen</option><option value="nein">Noch offen</option></select>
+  </div>
+  <div class="grid" id="kGrid"></div>
+</section>
+
 <section class="tab" id="t-air">
   <h2>Airlines</h2>
   <p class="info">Alle Betreiber aus deinem Logbuch, sortiert nach Anzahl verschiedener Flugzeuge.</p>
@@ -228,7 +244,7 @@ function render(){
   $("alist").innerHTML=[...a].sort().map(x=>`<option value="${esc(x)}">`).join("");
   const arten=[...new Set(L.map(x=>x.art))].sort(),cur=$("gArt").value;
   $("gArt").innerHTML='<option value="">Alle Arten</option>'+arten.map(x=>`<option${x===cur?" selected":""}>${esc(x)}</option>`).join("");
-  galerie();musterListe();airlines();if($("t-karte").classList.contains("on"))zeigeKarte()}
+  galerie();musterListe();katalog();airlines();if($("t-karte").classList.contains("on"))zeigeKarte()}
 function galerie(){
   const q=$("gSuche").value.toLowerCase(),art=$("gArt").value;
   let l=L.filter(x=>(!art||x.art===art)&&(!q||[x.kenn,x.muster,x.airline,x.ort,x.flug,x.notiz].join(" ").toLowerCase().includes(q)));
@@ -306,16 +322,55 @@ function panel(){
    <div class="akt"><button id="flTake">Ins Logbuch übernehmen</button><button class="leise" id="flZu">Schließen</button></div>`;
   b.hidden=false;trail.setLatLngs(trails[a.hex]||[]);
   $("flZu").onclick=()=>{liveSel=null;panel()};
-  $("flTake").onclick=()=>{reset();tab("neu");$("muster").value=a.desc||a.t||"";$("kenn").value=a.r||(a.hex||"").toUpperCase();$("flug").value=(a.flight||"").trim();$("airline").value=a.ownOp||"";pos={lat:a.lat,lng:a.lon};$("posInfo").textContent="Standort des Flugzeugs übernommen"}}
+  $("flTake").onclick=()=>{reset();tab("neu");const kt=KAT.find(x=>x[1]===a.t);$("muster").value=kt?kt[0]:(a.desc||a.t||"");$("kenn").value=a.r||(a.hex||"").toUpperCase();$("flug").value=(a.flight||"").trim();$("airline").value=a.ownOp||"";pos={lat:a.lat,lng:a.lon};$("posInfo").textContent="Standort des Flugzeugs übernommen"}}
 const L_=window.L;
 
 /* Sicherung */
-$("exp").onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(L)],{type:"application/json"}));a.download="flug-logbuch-"+nowLocal().slice(0,10)+".json";a.click()};
+$("exp").onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify({l:L,k:[...K]})],{type:"application/json"}));a.download="flug-logbuch-"+nowLocal().slice(0,10)+".json";a.click()};
 $("imp").onclick=()=>$("impF").click();
-$("impF").onchange=async e=>{try{const d=JSON.parse(await e.target.files[0].text());if(!Array.isArray(d))throw 0;
+$("impF").onchange=async e=>{try{const d0=JSON.parse(await e.target.files[0].text()),d=Array.isArray(d0)?d0:d0.l;if(!Array.isArray(d))throw 0;if(d0.k)d0.k.forEach(k=>K.add(k));saveK();
   const ids=new Set(L.map(x=>x.id));d.forEach(x=>{if(x&&x.id&&x.kenn&&!ids.has(x.id))L.push(x)});save();render();alert("Wiederhergestellt.")}catch(_){alert("Datei konnte nicht gelesen werden.")}e.target.value=""};
 
-reset();render();
+/* Katalog */
+const KAT=[
+["Airbus A220-300","BCS3","Airbus","Kurzstrecke","130–160","6.300","2015"],["Airbus A319","A319","Airbus","Kurzstrecke","124–156","6.850","1995"],["Airbus A320-200","A320","Airbus","Kurzstrecke","150–180","6.150","1987"],["Airbus A320neo","A20N","Airbus","Kurzstrecke","150–194","6.500","2014"],["Airbus A321-200","A321","Airbus","Kurzstrecke","185–220","5.950","1993"],["Airbus A321neo","A21N","Airbus","Kurzstrecke","180–244","7.400","2016"],
+["Airbus A330-300","A333","Airbus","Langstrecke","250–300","11.750","1992"],["Airbus A330-900neo","A339","Airbus","Langstrecke","260–300","13.300","2017"],["Airbus A340-300","A343","Airbus","Langstrecke","260–295","13.400","1991"],["Airbus A350-900","A359","Airbus","Langstrecke","300–350","15.000","2013"],["Airbus A350-1000","A35K","Airbus","Langstrecke","350–410","16.100","2016"],["Airbus A380-800","A388","Airbus","Langstrecke","500–850","15.200","2005"],
+["Boeing 737-700","B737","Boeing","Kurzstrecke","126–149","6.000","1997"],["Boeing 737-800","B738","Boeing","Kurzstrecke","162–189","5.400","1997"],["Boeing 737 MAX 8","B38M","Boeing","Kurzstrecke","162–178","6.500","2016"],["Boeing 757-200","B752","Boeing","Kurzstrecke","200–239","7.250","1982"],
+["Boeing 767-300ER","B763","Boeing","Langstrecke","218–290","11.070","1986"],["Boeing 747-400","B744","Boeing","Langstrecke","416–524","13.450","1988"],["Boeing 747-8","B748","Boeing","Langstrecke","410–467","14.815","2010"],["Boeing 777-200LR","B77L","Boeing","Langstrecke","300–317","15.840","2005"],["Boeing 777-300ER","B77W","Boeing","Langstrecke","350–396","13.650","2003"],["Boeing 787-8","B788","Boeing","Langstrecke","242","13.620","2009"],["Boeing 787-9","B789","Boeing","Langstrecke","290","14.140","2013"],["Boeing 787-10","B78X","Boeing","Langstrecke","330","11.910","2017"],
+["Embraer E175","E175","Embraer","Regionalflug","76–88","4.000","2002"],["Embraer E190","E190","Embraer","Regionalflug","96–114","4.500","2004"],["Embraer E195-E2","E295","Embraer","Regionalflug","120–146","4.800","2016"],["Bombardier CRJ900","CRJ9","Bombardier","Regionalflug","76–90","2.800","2001"],["Fokker 100","F100","Fokker","Regionalflug","100–109","3.170","1986"],["ATR 72-600","AT76","ATR","Regionalflug","70–78","1.500","2009"],["De Havilland Dash 8-400","DH8D","De Havilland Canada","Regionalflug","68–90","2.040","1998"],
+["Antonov An-124","A124","Antonov","Fracht","Fracht","4.800","1982"],["Airbus A400M","A400","Airbus","Militär","Transport","8.900","2009"],["Eurofighter Typhoon","EUFI","Eurofighter","Militär","1","2.900","1994"],
+["Pilatus PC-12","PC12","Pilatus","Privat/Geschäftsreise","9","3.400","1991"],["Cessna 172","C172","Cessna","Kleinflugzeug","4","1.290","1955"],["Piper PA-28","P28A","Piper","Kleinflugzeug","4","1.000","1960"],["Robinson R44","R44","Robinson","Hubschrauber","4","560","1990"],["Airbus H145","EC45","Airbus Helicopters","Hubschrauber","8–10","680","1999"]];
+const KEY2="flug-katalog-v1";let K=new Set();try{K=new Set(JSON.parse(localStorage.getItem(KEY2)||"[]"))}catch(e){}
+const saveK=()=>{try{localStorage.setItem(KEY2,JSON.stringify([...K]))}catch(e){}};
+const n2=s=>String(s||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+const kk=s=>n2(s).replace(/^(airbus|boeing|embraer|bombardier|atr|dehavilland|pilatus|piper|cessna|robinson|fokker|antonov|eurofighter)/,"");
+const katFinde=m=>KAT.find(x=>kk(m)===kk(x[0])||n2(m)===n2(x[1]));
+const WT={BCS3:"Airbus A220",A319:"Airbus A319",A320:"Airbus A320 family",A20N:"Airbus A320neo family",A321:"Airbus A321",A21N:"Airbus A321neo",A333:"Airbus A330",A339:"Airbus A330neo",A343:"Airbus A340",A359:"Airbus A350",A35K:"Airbus A350",A388:"Airbus A380",B737:"Boeing 737 Next Generation",B738:"Boeing 737 Next Generation",B38M:"Boeing 737 MAX",B752:"Boeing 757",B763:"Boeing 767",B744:"Boeing 747-400",B748:"Boeing 747-8",B77L:"Boeing 777",B77W:"Boeing 777",B788:"Boeing 787 Dreamliner",B789:"Boeing 787 Dreamliner",B78X:"Boeing 787 Dreamliner",E175:"Embraer E-Jet family",E190:"Embraer E-Jet family",E295:"Embraer E-Jet E2 family",CRJ9:"Bombardier CRJ700 series",F100:"Fokker 100",AT76:"ATR 72",DH8D:"De Havilland Canada Dash 8",A124:"Antonov An-124 Ruslan",A400:"Airbus A400M Atlas",EUFI:"Eurofighter Typhoon",PC12:"Pilatus PC-12",C172:"Cessna 172",P28A:"Piper PA-28 Cherokee",R44:"Robinson R44",EC45:"Airbus Helicopters H145"};
+let BILD={};try{BILD=JSON.parse(localStorage.getItem("flug-bilder-v1")||"{}")}catch(e){}
+function ladeBilder(){
+  const ts=[...new Set(Object.values(WT))].filter(t=>!BILD[t]);if(!ts.length)return;
+  window.__wp=d=>{const q=d.query||{},nm={},rd={},pt={};
+    (q.normalized||[]).forEach(n=>nm[n.from]=n.to);(q.redirects||[]).forEach(r=>rd[r.from]=r.to);
+    Object.values(q.pages||{}).forEach(pg=>{if(pg.thumbnail)pt[pg.title]=pg.thumbnail.source});
+    ts.forEach(t=>{let x=nm[t]||t;x=rd[x]||x;if(pt[x])BILD[t]=pt[x]});
+    try{localStorage.setItem("flug-bilder-v1",JSON.stringify(BILD))}catch(e){}katalog()};
+  const sc=document.createElement("script");
+  sc.src="https://en.wikipedia.org/w/api.php?action=query&format=json&prop=pageimages&piprop=thumbnail&pithumbsize=480&redirects=1&titles="+encodeURIComponent(ts.join("|"))+"&callback=__wp";
+  sc.onload=sc.onerror=()=>sc.remove();document.head.appendChild(sc)}
+function katalog(){
+  if($("kKat").options.length<2)[...new Set(KAT.map(x=>x[3]))].forEach(c=>$("kKat").add(new Option(c,c)));
+  const seen={},own={};L.forEach(x=>{const k=katFinde(x.muster);if(k){(seen[k[1]]??=new Set()).add(x.kenn);if(!own[k[1]]&&x.fotos&&x.fotos[0])own[k[1]]=x.fotos[0]}});
+  const q=n2($("kSuche").value),kat=$("kKat").value,st=$("kStatus").value,ok=x=>!!(seen[x[1]]||K.has(x[1]));
+  const l=KAT.filter(x=>(!q||n2(x.join(" ")).includes(q))&&(!kat||x[3]===kat)&&(!st||(st==="ja")===ok(x)));
+  const n=KAT.filter(ok).length;
+  $("kProg").innerHTML=`<i style="width:${n/KAT.length*100}%"></i>`;
+  $("kZahl").textContent=`${n} von ${KAT.length} Typen gesehen · ${l.length} angezeigt`;
+  $("kGrid").innerHTML=l.map(x=>`<article class="karte ${ok(x)?"ja":""}">${own[x[1]]||BILD[WT[x[1]]]?`<img src="${own[x[1]]||BILD[WT[x[1]]]}" alt="${esc(x[0])}" loading="lazy" onerror="this.remove()">`:""}<div class="in"><span class="typ">${esc(x[3])}</span><h3>${esc(x[0])}</h3>
+    <dl class="kdl"><dt>Hersteller</dt><dd>${esc(x[2])}</dd><dt>Typcode (ICAO)</dt><dd>${esc(x[1])}</dd><dt>Sitze</dt><dd>${esc(x[4])}</dd><dt>Reichweite</dt><dd>ca. ${esc(x[5])} km</dd><dt>Erstflug</dt><dd>${esc(x[6])}</dd></dl></div>
+    ${seen[x[1]]?`<label><input type="checkbox" checked disabled>&nbsp;Im Logbuch (${seen[x[1]].size} Kennzeichen)</label>`:`<label><input type="checkbox" data-k="${x[1]}" ${K.has(x[1])?"checked":""}>&nbsp;Gesehen</label>`}</article>`).join("")||'<div class="leer">Nichts gefunden.</div>'}
+$("kGrid").onchange=e=>{const c=e.target.dataset.k;if(!c)return;e.target.checked?K.add(c):K.delete(c);saveK();katalog()};
+["kSuche","kKat","kStatus"].forEach(i=>$(i).oninput=katalog);
+reset();render();ladeBilder();
 </script>
 </body>
 </html>
