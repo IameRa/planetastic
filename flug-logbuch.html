@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flug-Logbuch</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{--nacht:#0e1c2e;--tafel:#18304a;--akz:#38b6ff;--rot:#e8452c;--rot2:#c93720;--papier:#eaf0f5;--weiss:#fff;--text:#16212d;--grau:#64707d;--linie:#d8e0e8;
+--kopf:"Barlow Condensed","Arial Narrow",Arial,sans-serif;--fliess:"Barlow","Helvetica Neue",Arial,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:var(--papier);color:var(--text);font:400 16px/1.5 var(--fliess)}
+header{background:var(--nacht);color:#fff;padding:28px 16px 0}
+header::after{content:"";display:block;height:10px;margin-top:24px;background:repeating-linear-gradient(90deg,#2d4258 0 24px,transparent 24px 48px) center/100% 4px no-repeat}
+.kopf,main,footer{max-width:1040px;margin:0 auto}
+.titel{display:flex;gap:14px;align-items:center}
+.titel svg{width:48px;height:48px;flex:none}
+h1{margin:0;font:700 clamp(2.3rem,7vw,3.4rem)/1 var(--kopf)}
+header p{margin:4px 0 0;color:#a9bccd}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.stat{background:var(--tafel);border:1px solid #27415c;border-radius:8px;padding:8px 16px 6px;min-width:110px}
+.stat b{display:block;font:700 2.1rem/1.1 var(--kopf);color:var(--akz)}
+.stat span{color:#a9bccd;font-size:.82rem}
+nav{background:var(--nacht);position:sticky;top:0;z-index:1000;border-bottom:1px solid #27415c}
+nav div{max-width:1040px;margin:0 auto;display:flex;gap:4px;overflow-x:auto;padding:8px 12px}
+nav button{background:none;color:#a9bccd;border-radius:999px;padding:8px 18px;white-space:nowrap}
+nav button:hover{background:var(--tafel)}
+nav button.on{background:var(--akz);color:var(--nacht)}
+main{padding:22px 16px 8px}
+h2{font:700 1.6rem/1.2 var(--kopf);margin:0}
+.tab{display:none}.tab.on{display:block}
+form{background:#fff;border-radius:14px;padding:22px;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px 16px;box-shadow:0 12px 32px rgba(14,28,46,.08);border-top:5px solid var(--rot)}
+form h2,.breit{grid-column:1/-1}
+label{display:flex;flex-direction:column;font-size:.82rem;font-weight:600;color:var(--grau);gap:5px}
+input,select,textarea,button{font:inherit;color:var(--text)}
+input,select,textarea{padding:10px 12px;border:1.5px solid var(--linie);background:#f8fafc;border-radius:8px;min-width:0;font-weight:400}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--akz);box-shadow:0 0 0 3px rgba(56,182,255,.35);background:#fff}
+button{cursor:pointer;border:0;border-radius:999px;padding:12px 26px;background:var(--rot);color:#fff;font-weight:600}
+button:hover{background:var(--rot2)}
+button.leise{background:#fff;color:var(--text);border:1.5px solid var(--linie);padding:9px 18px}
+button.leise:hover{background:var(--papier)}
+button:focus-visible{outline:3px solid var(--akz);outline-offset:2px}
+.akt{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.minis{display:flex;gap:10px;flex-wrap:wrap}
+.m{position:relative}.m img{width:84px;height:60px;object-fit:cover;border-radius:8px;display:block}
+.m button{position:absolute;top:-7px;right:-7px;width:22px;height:22px;padding:0;background:var(--text);font-size:15px;line-height:1}
+.info{color:var(--grau);font-size:.9rem;margin:4px 0}
+.leiste{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.leiste h2{flex:1 1 auto}
+.filter{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+.filter input,.filter select{flex:1 1 170px;border-radius:999px;padding-inline:16px;background:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(285px,1fr));gap:18px}
+.karte{background:#fff;border-radius:14px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 8px 24px rgba(14,28,46,.07);border-top:5px solid var(--akz)}
+.karte img{width:100%;aspect-ratio:3/2;object-fit:cover;display:block;background:var(--papier)}
+.karte .in{padding:14px 16px 8px;flex:1}
+.karte h3{margin:0;font:700 1.45rem/1.15 var(--kopf)}
+.typ{display:inline-block;background:var(--tafel);color:#fff;font-size:.75rem;font-weight:600;padding:2px 10px;border-radius:999px;margin-bottom:6px}
+.meta{color:var(--grau);font-size:.88rem}
+.karte .akt{padding:0 16px 14px}
+.karte .akt button{padding:6px 14px;font-size:.85rem}
+.leer{grid-column:1/-1;background:#fff;border:2px dashed #c3cfda;border-radius:14px;padding:32px;text-align:center;color:var(--grau)}
+.zeile{background:#fff;border-radius:12px;padding:12px 16px;margin-bottom:8px;display:flex;gap:12px;align-items:center;border-left:5px solid var(--linie)}
+.zeile.ja{border-left-color:var(--akz)}
+.zeile b{font:700 1.2rem var(--kopf)}
+.zeile .z{margin-left:auto;font:700 1.5rem var(--kopf);color:var(--akz)}
+.zeile small{display:block;color:var(--grau)}
+#kartebox{height:420px;border-radius:14px;position:relative;z-index:0;box-shadow:0 8px 24px rgba(14,28,46,.08)}
+.fl{background:none;border:0}.fl div{filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))}
+.flbox{background:#fff;border-radius:14px;padding:16px 18px;margin-top:12px;border-top:5px solid var(--akz);box-shadow:0 8px 24px rgba(14,28,46,.08)}
+.flbox h3{margin:0;font:700 1.6rem/1.1 var(--kopf)}
+.flbox dl{display:grid;grid-template-columns:auto 1fr;margin:10px 0}
+.flbox dt,.flbox dd{padding:4px 0;border-top:1px dashed var(--linie);font-size:.9rem}
+.flbox dt{color:var(--grau);padding-right:14px}.flbox dd{margin:0;text-align:right;font-weight:600}
+footer{padding:18px 16px 36px;color:var(--grau);font-size:.8rem}
+</style>
+</head>
+<body>
+<header><div class="kopf">
+  <div class="titel">
+    <svg viewBox="0 0 44 44" aria-hidden="true"><rect width="44" height="44" rx="11" fill="#38b6ff"/><path d="M22 7c1.5 0 2.4 1.2 2.4 3v8l12 7v3.5l-12-3.3v7l3.2 2.5V36L22 34.4 18.4 36v-2.3l3.2-2.5v-7L9.6 28.5V25l12-7v-8c0-1.800.9-3 2.400-3z" fill="#0e1c2e" transform="translate(0 0)"/></svg>
+    <div><h1>Flug-Logbuch</h1><p>Trag ein, was du am Himmel und am Flughafen gesehen hast.</p></div>
+  </div>
+  <div class="stats" id="stats"></div>
+</div></header>
+<nav><div id="nav">
+  <button data-t="neu" class="on">Eintragen</button><button data-t="gal">Galerie</button><button data-t="karte">Karte</button><button data-t="muster">Muster</button><button data-t="air">Airlines</button>
+</div></nav>
+<main>
+<section class="tab on" id="t-neu">
+<form id="form">
+  <h2 id="ft">Neues Flugzeug eintragen</h2>
+  <label>Muster
+    <input id="muster" list="mlist" required placeholder="z. B. Airbus A320-200">
+    <datalist id="mlist"></datalist>
+  </label>
+  <label>Kennzeichen
+    <input id="kenn" required placeholder="z. B. D-AIUA" autocapitalize="characters">
+  </label>
+  <label>Airline / Betreiber
+    <input id="airline" list="alist" placeholder="z. B. Lufthansa">
+    <datalist id="alist"></datalist>
+  </label>
+  <label>Art
+    <select id="art"><option>Linienflug</option><option>Charter</option><option>Fracht</option><option>Business/Privat</option><option>Militär</option><option>Hubschrauber</option><option>Segel-/Sportflug</option><option>Sonstiges</option></select>
+  </label>
+  <label>Flughafen / Ort
+    <input id="ort" placeholder="z. B. Hamburg HAM">
+  </label>
+  <label>Flugnummer (optional)
+    <input id="flug" placeholder="z. B. LH 012">
+  </label>
+  <label>Datum und Uhrzeit
+    <input id="zeit" type="datetime-local" required>
+  </label>
+  <div class="breit">
+    <span class="info"><b>Fotos und Standort</b></span>
+    <div class="akt" style="margin:6px 0">
+      <button type="button" class="leise" id="kamB">Kamera öffnen</button>
+      <button type="button" class="leise" id="galB">Aus Galerie wählen</button>
+      <button type="button" class="leise" id="posB">Standort holen</button>
+    </div>
+    <input id="foto" type="file" accept="image/*" multiple hidden>
+    <input id="fotoCam" type="file" accept="image/*" capture="environment" hidden>
+    <div class="minis" id="minis"></div>
+    <span class="info" id="posInfo" role="status"></span>
+    <span class="info">Fotos werden verkleinert und nur auf diesem Gerät im Browser gespeichert. Mit ★ wählst du das Titelbild.</span>
+  </div>
+  <label class="breit">Notiz
+    <textarea id="notiz" rows="2" placeholder="Livery, Besonderheiten, Landebahn …"></textarea>
+  </label>
+  <div class="breit akt">
+    <button type="submit" id="sBtn">Flugzeug speichern</button>
+    <button type="button" class="leise" id="abBtn" hidden>Abbrechen</button>
+  </div>
+</form>
+</section>
+
+<section class="tab" id="t-gal">
+  <div class="leiste"><h2>Galerie</h2><button class="leise" id="exp">Alles sichern</button><button class="leise" id="imp">Wiederherstellen</button><input id="impF" type="file" accept="application/json" hidden></div>
+  <div class="filter">
+    <input id="gSuche" type="search" placeholder="Suche: Kennzeichen, Muster, Airline, Ort" aria-label="Suche">
+    <select id="gArt" aria-label="Art"><option value="">Alle Arten</option></select>
+    <select id="gSort" aria-label="Sortierung"><option value="neu">Neueste zuerst</option><option value="alt">Älteste zuerst</option></select>
+  </div>
+  <p class="info" id="gInfo" role="status"></p>
+  <div class="grid" id="gGrid"></div>
+</section>
+
+<section class="tab" id="t-karte">
+  <h2>Karte</h2>
+  <p class="info" id="kInfo"></p>
+  <label style="flex-direction:row;align-items:center;margin:6px 0"><input type="checkbox" id="liveAn" checked> Live-Flugzeuge anzeigen (aktualisiert alle 10 Sekunden)</label>
+  <p class="info" id="liveInfo" role="status"></p>
+  <details class="info" style="margin-bottom:10px"><summary>Keine Live-Daten? Eigenen Proxy eintragen</summary>
+    <div class="akt" style="margin-top:8px"><input id="pxIn" placeholder="https://dein-worker.workers.dev/?url=" style="flex:1 1 260px"><button type="button" class="leise" id="pxB">Speichern</button></div></details>
+  <div id="kartebox"></div>
+  <div class="flbox" id="flBox" hidden></div>
+</section>
+
+<section class="tab" id="t-muster">
+  <h2>Muster</h2>
+  <p class="info">Zählt pro Flugtyp, wie viele verschiedene Flugzeuge (Kennzeichen) du gesehen hast. Gängige Muster sind schon vorgegeben, weitere kommen automatisch dazu, sobald du sie einträgst.</p>
+  <div class="filter">
+    <input id="mSuche" type="search" placeholder="Muster suchen, z. B. A320 oder Boeing" aria-label="Muster suchen">
+    <select id="mStatus" aria-label="Status"><option value="">Alle</option><option value="ja">Gesehen</option><option value="nein">Noch nicht gesehen</option></select>
+  </div>
+  <p class="info" id="mZahl" role="status"></p>
+  <div id="mListe"></div>
+</section>
+
+<section class="tab" id="t-air">
+  <h2>Airlines</h2>
+  <p class="info">Alle Betreiber aus deinem Logbuch, sortiert nach Anzahl verschiedener Flugzeuge.</p>
+  <div id="aListe"></div>
+</section>
+</main>
+<footer>Daten bleiben lokal in deinem Browser. Mit „Alles sichern“ erzeugst du eine Sicherungsdatei.</footer>
+
+<script>
+const KEY="flug-logbuch-v1";
+const STD=["Airbus A220-300","Airbus A319","Airbus A320-200","Airbus A320neo","Airbus A321-200","Airbus A321neo","Airbus A330-300","Airbus A330neo","Airbus A340-300","Airbus A350-900","Airbus A380-800","Boeing 717","Boeing 737-700","Boeing 737-800","Boeing 737 MAX 8","Boeing 747-400","Boeing 747-8","Boeing 757-200","Boeing 767-300","Boeing 777-300ER","Boeing 787-9","Embraer E190","Embraer E195-E2","Bombardier CRJ900","ATR 72-600","De Havilland Dash 8-400","Fokker 100","Antonov An-124","Airbus A400M","Eurofighter Typhoon","Cessna 172","Robinson R44","Airbus H145"];
+let L=[];try{L=JSON.parse(localStorage.getItem(KEY)||"[]")}catch(e){L=[]}
+let fotos=[],pos=null,edit=null,map=null,layer=null;
+const $=i=>document.getElementById(i);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const norm=s=>s.toUpperCase().replace(/\s+/g,"");
+function save(){try{localStorage.setItem(KEY,JSON.stringify(L))}catch(e){alert("Speicher voll. Bitte sichere deine Daten und lösche ältere Fotos.")}}
+function fmt(t){const d=new Date(t);return isNaN(d)?"":d.toLocaleString("de-DE",{dateStyle:"medium",timeStyle:"short"})}
+function nowLocal(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)}
+
+/* Tabs */
+function tab(n){if(n!=="karte")liveStop();document.querySelectorAll(".tab").forEach(e=>e.classList.toggle("on",e.id==="t-"+n));
+  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.t===n));
+  if(n==="karte")zeigeKarte();scrollTo(0,0)}
+$("nav").onclick=e=>{if(e.target.dataset.t)tab(e.target.dataset.t)};
+
+/* Fotos */
+function verkleinern(file){return new Promise(ok=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{
+  const s=Math.min(1,900/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=im.width*s;c.height=im.height*s;
+  c.getContext("2d").drawImage(im,0,0,c.width,c.height);ok(c.toDataURL("image/jpeg",.78))};im.src=r.result};r.readAsDataURL(file)})}
+async function addFotos(e){for(const f of e.target.files)fotos.push(await verkleinern(f));e.target.value="";minis()}
+function minis(){$("minis").innerHTML=fotos.map((f,i)=>`<div class="m"><img src="${f}" alt="Foto ${i+1}"><button type="button" data-x="${i}" aria-label="Entfernen">×</button>${i?`<button type="button" data-s="${i}" style="top:auto;bottom:-7px;background:var(--akz);color:var(--nacht)" aria-label="Titelbild">★</button>`:""}</div>`).join("")}
+$("minis").onclick=e=>{const b=e.target;if(b.dataset.x!==undefined)fotos.splice(+b.dataset.x,1);else if(b.dataset.s!==undefined)fotos.unshift(fotos.splice(+b.dataset.s,1)[0]);else return;minis()};
+$("foto").onchange=addFotos;$("fotoCam").onchange=addFotos;
+$("kamB").onclick=()=>$("fotoCam").click();$("galB").onclick=()=>$("foto").click();
+$("posB").onclick=()=>{if(!navigator.geolocation){$("posInfo").textContent="Standort wird nicht unterstützt.";return}
+  $("posInfo").textContent="Standort wird gesucht …";
+  navigator.geolocation.getCurrentPosition(p=>{pos={lat:p.coords.latitude,lng:p.coords.longitude};$("posInfo").textContent=`Standort gespeichert (${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)})`},()=>{$("posInfo").textContent="Standort nicht verfügbar."},{enableHighAccuracy:true,timeout:15000})};
+
+/* Formular */
+function reset(){edit=null;fotos=[];pos=null;$("form").reset();$("zeit").value=nowLocal();minis();$("posInfo").textContent="";$("ft").textContent="Neues Flugzeug eintragen";$("sBtn").textContent="Flugzeug speichern";$("abBtn").hidden=true}
+$("abBtn").onclick=reset;
+$("form").onsubmit=e=>{e.preventDefault();
+  const o={id:edit||Date.now().toString(36),muster:$("muster").value.trim(),kenn:norm($("kenn").value),airline:$("airline").value.trim(),art:$("art").value,ort:$("ort").value.trim(),flug:$("flug").value.trim(),zeit:$("zeit").value,notiz:$("notiz").value.trim(),fotos:[...fotos],pos};
+  const i=L.findIndex(x=>x.id===o.id);i>=0?L[i]=o:L.push(o);save();reset();render();tab("gal")};
+function bearbeiten(id){const o=L.find(x=>x.id===id);if(!o)return;edit=id;
+  $("muster").value=o.muster;$("kenn").value=o.kenn;$("airline").value=o.airline||"";$("art").value=o.art;$("ort").value=o.ort||"";$("flug").value=o.flug||"";$("zeit").value=o.zeit;$("notiz").value=o.notiz||"";
+  fotos=[...(o.fotos||[])];pos=o.pos||null;minis();$("posInfo").textContent=pos?"Standort gespeichert":"";
+  $("ft").textContent="Eintrag bearbeiten";$("sBtn").textContent="Änderungen speichern";$("abBtn").hidden=false;tab("neu")}
+
+/* Anzeige */
+function render(){
+  const k=new Set(L.map(x=>x.kenn)),m=new Set(L.map(x=>x.muster)),a=new Set(L.map(x=>x.airline).filter(Boolean)),o=new Set(L.map(x=>x.ort).filter(Boolean));
+  $("stats").innerHTML=[[k.size,"Flugzeuge"],[m.size,"Muster"],[a.size,"Airlines"],[o.size,"Orte"]].map(([n,t])=>`<div class="stat"><b>${n}</b><span>${t}</span></div>`).join("");
+  $("mlist").innerHTML=[...new Set([...STD,...m])].sort().map(x=>`<option value="${esc(x)}">`).join("");
+  $("alist").innerHTML=[...a].sort().map(x=>`<option value="${esc(x)}">`).join("");
+  const arten=[...new Set(L.map(x=>x.art))].sort(),cur=$("gArt").value;
+  $("gArt").innerHTML='<option value="">Alle Arten</option>'+arten.map(x=>`<option${x===cur?" selected":""}>${esc(x)}</option>`).join("");
+  galerie();musterListe();airlines();if($("t-karte").classList.contains("on"))zeigeKarte()}
+function galerie(){
+  const q=$("gSuche").value.toLowerCase(),art=$("gArt").value;
+  let l=L.filter(x=>(!art||x.art===art)&&(!q||[x.kenn,x.muster,x.airline,x.ort,x.flug,x.notiz].join(" ").toLowerCase().includes(q)));
+  l.sort((a,b)=>$("gSort").value==="alt"?a.zeit.localeCompare(b.zeit):b.zeit.localeCompare(a.zeit));
+  $("gInfo").textContent=`${l.length} von ${L.length} Einträgen`;
+  $("gGrid").innerHTML=l.length?l.map(x=>`<article class="karte">${x.fotos&&x.fotos[0]?`<img src="${x.fotos[0]}" alt="${esc(x.kenn)}" loading="lazy">`:""}
+    <div class="in"><span class="typ">${esc(x.art)}</span><h3>${esc(x.kenn)} · ${esc(x.muster)}</h3>
+    <div class="meta">${esc([x.airline,x.flug,x.ort].filter(Boolean).join(" · "))}<br>${fmt(x.zeit)}${x.fotos&&x.fotos.length>1?` · ${x.fotos.length} Fotos`:""}</div>
+    ${x.notiz?`<p style="margin:8px 0 0;font-size:.92rem">${esc(x.notiz)}</p>`:""}</div>
+    <div class="akt"><button class="leise" data-e="${x.id}">Bearbeiten</button><button class="leise" data-d="${x.id}">Löschen</button></div></article>`).join("")
+    :'<div class="leer">Noch nichts eingetragen. Wechsle zu „Eintragen“ und speichere dein erstes Flugzeug.</div>'}
+$("gGrid").onclick=e=>{const b=e.target;if(b.dataset.e)bearbeiten(b.dataset.e);else if(b.dataset.d&&confirm("Eintrag wirklich löschen?")){L=L.filter(x=>x.id!==b.dataset.d);save();render()}};
+["gSuche","gArt","gSort"].forEach(i=>$(i).oninput=galerie);
+
+function musterListe(){
+  const z={};L.forEach(x=>(z[x.muster]??=new Set()).add(x.kenn));
+  const alle=[...new Set([...STD,...Object.keys(z)])].sort();
+  const q=$("mSuche").value.toLowerCase(),s=$("mStatus").value;
+  const l=alle.filter(n=>n.toLowerCase().includes(q)&&(!s||(s==="ja")===!!z[n]));
+  $("mZahl").textContent=`${Object.keys(z).length} von ${alle.length} Mustern gesehen`;
+  $("mListe").innerHTML=l.map(n=>{const c=z[n]?z[n].size:0;return `<div class="zeile ${c?"ja":""}"><div><b>${esc(n)}</b><small>${c?esc([...z[n]].join(", ")):"Noch nicht gesehen"}</small></div><span class="z">${c||""}</span></div>`}).join("")||'<div class="leer">Nichts gefunden.</div>'}
+["mSuche","mStatus"].forEach(i=>$(i).oninput=musterListe);
+
+function airlines(){
+  const z={};L.filter(x=>x.airline).forEach(x=>(z[x.airline]??=new Set()).add(x.kenn));
+  const l=Object.entries(z).sort((a,b)=>b[1].size-a[1].size);
+  $("aListe").innerHTML=l.map(([n,s])=>`<div class="zeile ja"><div><b>${esc(n)}</b><small>${esc([...s].slice(0,8).join(", "))}${s.size>8?" …":""}</small></div><span class="z">${s.size}</span></div>`).join("")||'<div class="leer">Noch keine Airline eingetragen.</div>'}
+
+/* Karte */
+function zeigeKarte(){
+  if(!map){map=L_.map("kartebox").setView([54.2,10.1],8);const str=L_.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",{maxZoom:18,attribution:"Tiles © Esri"}),sat=L_.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:18,attribution:"Tiles © Esri"}),topo=L_.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",{subdomains:"abc",maxZoom:17,attribution:"© OpenStreetMap-Mitwirkende, SRTM | © OpenTopoMap"});
+    str.addTo(map);L_.control.layers({"Straße":str,"Satellit":sat,"Topografie":topo}).addTo(map);layer=L_.layerGroup().addTo(map);live=L_.layerGroup().addTo(map);trail=L_.polyline([],{color:"#38b6ff",weight:2,opacity:.8}).addTo(map);
+    map.on("moveend",()=>{clearTimeout(dbt);dbt=setTimeout(holeLive,600)});map.on("click",()=>{liveSel=null;panel()})}
+  layer.clearLayers();const p=L.filter(x=>x.pos);
+  $("kInfo").textContent=p.length?`${p.length} Einträge mit Standort.`:"Noch keine Einträge mit Standort. Nutze beim Eintragen „Standort holen“.";
+  p.forEach(x=>L_.marker([x.pos.lat,x.pos.lng]).bindPopup(`<b>${esc(x.kenn)}</b><br>${esc(x.muster)}<br>${fmt(x.zeit)}`).addTo(layer));
+  setTimeout(()=>{map.invalidateSize();if(p.length&&!fitDone){fitDone=1;map.fitBounds(p.map(x=>[x.pos.lat,x.pos.lng]),{maxZoom:9,padding:[30,30]})}liveStart()},50)}
+let live,trail,dbt,liveT,liveSel=null,liveData={},trails={},fitDone=0;
+try{$("pxIn").value=localStorage.getItem("flug-proxy")||""}catch(_){}
+$("pxB").onclick=()=>{try{localStorage.setItem("flug-proxy",$("pxIn").value.trim())}catch(_){}$("liveInfo").textContent="Proxy gespeichert.";holeLive()};
+$("liveAn").onchange=()=>$("liveAn").checked?liveStart():(liveStop(),live.clearLayers(),trail.setLatLngs([]),liveSel=null,panel(),$("liveInfo").textContent="");
+function liveStart(){liveStop();if(!$("liveAn").checked)return;holeLive();liveT=setInterval(holeLive,10000)}
+function liveStop(){clearInterval(liveT)}
+const farbe=a=>a.alt_baro==="ground"?"#8a949f":a.alt_baro<10000?"#ffb81c":a.alt_baro<25000?"#2ecc8f":"#38b6ff";
+async function holeLive(){
+  if(!map||!$("liveAn").checked)return;
+  if(map.getZoom()<6){live.clearLayers();$("liveInfo").textContent="Zoome näher heran (ab Stufe 6), um Flugzeuge zu laden.";return}
+  const c=map.getCenter(),r=Math.min(250,Math.ceil(c.distanceTo(map.getBounds().getNorthEast())/1852)),pt=`/v2/point/${c.lat.toFixed(3)}/${c.lng.toFixed(3)}/${r}`;
+  const la=c.lat.toFixed(3),lo=c.lng.toFixed(3),bb=map.getBounds(),fehler=[];
+  const quellen=[["adsb.lol",`https://api.adsb.lol/v2/point/${la}/${lo}/${r}`],["adsb.lol (alt)",`https://api.adsb.lol/v2/lat/${la}/lon/${lo}/dist/${r}`],["adsb.fi",`https://opendata.adsb.fi/api/v2/lat/${la}/lon/${lo}/dist/${r}`],["airplanes.live",`https://api.airplanes.live/v2/point/${la}/${lo}/${r}`],
+   ["OpenSky",`https://opensky-network.org/api/states/all?lamin=${bb.getSouth().toFixed(3)}&lomin=${bb.getWest().toFixed(3)}&lamax=${bb.getNorth().toFixed(3)}&lomax=${bb.getEast().toFixed(3)}`]];
+  let ac=null,quelle="";
+  let px="";try{px=localStorage.getItem("flug-proxy")||""}catch(_){}
+  const u0=quellen[0][1],alle=[...(px?[["Eigener Proxy",px+encodeURIComponent(u0)]]:[]),...quellen,["Proxy corsproxy.io","https://corsproxy.io/?url="+encodeURIComponent(u0)],["Proxy allorigins","https://api.allorigins.win/raw?url="+encodeURIComponent(u0)]];
+  for(const [n,u] of alle){try{const res=await fetch(u);if(!res.ok){fehler.push(n+": HTTP "+res.status);continue}const d=await res.json();
+    if(d.states){ac=d.states.map(t=>({hex:t[0],flight:(t[1]||"").trim(),lon:t[5],lat:t[6],alt_baro:t[8]?"ground":(t[7]??t[13]??0)*3.28084,gs:t[9]!=null?t[9]*1.94384:null,track:t[10],baro_rate:t[11]!=null?Math.round(t[11]*196.85):null,squawk:t[14]}))}
+    else ac=d.ac||d.aircraft;
+    if(ac){quelle=n;break}}catch(e){fehler.push(n+": blockiert/offline")}}
+  if(!ac){$("liveInfo").textContent="Live-Daten nicht erreichbar ("+fehler.join("; ")+"). Neuer Versuch in 10 Sekunden.";return}
+  ac=ac.filter(a=>a.lat!=null&&a.lon!=null);
+  liveData={};live.clearLayers();
+  ac.forEach(a=>{liveData[a.hex]=a;(trails[a.hex]??=[]).push([a.lat,a.lon]);if(trails[a.hex].length>40)trails[a.hex].shift();
+    const ic=L_.divIcon({className:"fl",iconSize:[26,26],iconAnchor:[13,13],html:`<div style="transform:rotate(${a.track||0}deg)"><svg viewBox="0 0 24 24" width="26" height="26"><path d="M12 2c.9 0 1.5.9 1.5 2V9l8 5v2l-8-2.300V19l2 1.500V22l-3.500-1-3.500 1v-1.500l2-1.500v-5.300L2 16v-2l8-5V4c0-1.100.6-2 1.500-2z" fill="${farbe(a)}" stroke="#0e1c2e" stroke-width=".9"/></svg></div>`});
+    const m=L_.marker([a.lat,a.lon],{icon:ic,title:a.flight||a.r||a.hex}).addTo(live);
+    m.on("click",ev=>{L_.DomEvent.stopPropagation(ev);liveSel=a.hex;panel()})});
+  $("liveInfo").textContent=`${ac.length} Flugzeuge live im Umkreis von ${r} nm (Quelle: ${quelle}${quelle==="OpenSky"?", ohne Muster und Kennzeichen":""}). Tippe ein Flugzeug an für Details.`;panel()}
+function panel(){
+  const b=$("flBox"),a=liveData[liveSel];
+  if(!a){b.hidden=true;trail.setLatLngs([]);return}
+  const gr=a.alt_baro==="ground",alt=gr?"Am Boden":`${Math.round(a.alt_baro).toLocaleString("de-DE")} ft (${Math.round(a.alt_baro*.3048).toLocaleString("de-DE")} m)`,
+   gs=a.gs!=null?`${Math.round(a.gs*1.852)} km/h (${Math.round(a.gs)} kt)`:"–",vr=a.baro_rate!=null?`${a.baro_rate>0?"+":""}${a.baro_rate} ft/min`:"–";
+  const z=[["Muster",a.desc||a.t||"–"],["Typcode",a.t||"–"],["Kennzeichen",a.r||"–"],["Betreiber",a.ownOp||"–"],["Höhe",alt],["Geschwindigkeit",gs],["Kurs",a.track!=null?Math.round(a.track)+"°":"–"],["Steigrate",vr],["Squawk",a.squawk||"–"],["ICAO-Hex",(a.hex||"").toUpperCase()]];
+  b.innerHTML=`<h3>${esc((a.flight||"").trim()||a.r||a.hex)}</h3><span class="info">${esc(a.desc||a.t||"Unbekanntes Muster")}${a.r?" · "+esc(a.r):""}</span>
+   <dl>${z.map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
+   <div class="akt"><button id="flTake">Ins Logbuch übernehmen</button><button class="leise" id="flZu">Schließen</button></div>`;
+  b.hidden=false;trail.setLatLngs(trails[a.hex]||[]);
+  $("flZu").onclick=()=>{liveSel=null;panel()};
+  $("flTake").onclick=()=>{reset();tab("neu");$("muster").value=a.desc||a.t||"";$("kenn").value=a.r||(a.hex||"").toUpperCase();$("flug").value=(a.flight||"").trim();$("airline").value=a.ownOp||"";pos={lat:a.lat,lng:a.lon};$("posInfo").textContent="Standort des Flugzeugs übernommen"}}
+const L_=window.L;
+
+/* Sicherung */
+$("exp").onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(L)],{type:"application/json"}));a.download="flug-logbuch-"+nowLocal().slice(0,10)+".json";a.click()};
+$("imp").onclick=()=>$("impF").click();
+$("impF").onchange=async e=>{try{const d=JSON.parse(await e.target.files[0].text());if(!Array.isArray(d))throw 0;
+  const ids=new Set(L.map(x=>x.id));d.forEach(x=>{if(x&&x.id&&x.kenn&&!ids.has(x.id))L.push(x)});save();render();alert("Wiederhergestellt.")}catch(_){alert("Datei konnte nicht gelesen werden.")}e.target.value=""};
+
+reset();render();
+</script>
+</body>
+</html>
